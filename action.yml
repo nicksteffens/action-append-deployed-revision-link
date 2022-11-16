@@ -1,13 +1,31 @@
-name: 'Wait'
-description: 'Wait a designated number of milliseconds'
+name: "Append Deployed Revision"
+description: "Appending the provided pull request ID with ${url}?${packageName}_revision=${revision}"
+branding:
+  icon: "align-left"
+  color: "blue"
 inputs:
-  milliseconds:  # id of input
-    description: 'number of milliseconds to wait'
+  auth:
+    description: "The github auth token"
     required: true
-    default: '1000'
-outputs:
-  time: # output will be available to future steps
-    description: 'The current time after waiting'
+  repo:
+    description: "The github repo name"
+    required: true
+  owner:
+    description: "The github repo owner"
+    required: true
+  pr:
+    description: "The pr number"
+    required: true
+  url:
+    description: "The output deployed url"
+    required: true
+  packageName:
+    description: "The output package"
+    required: true
+  revision:
+    description: "The output short commit SHA"
+    required: true
+
 runs:
   using: 'node16'
   main: 'dist/index.js'

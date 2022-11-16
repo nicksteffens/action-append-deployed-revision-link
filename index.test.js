@@ -1,24 +1,51 @@
-const wait = require('./wait');
-const process = require('process');
-const cp = require('child_process');
-const path = require('path');
+const appendDeployedRevision = require('./append-deployed-revision');
 
-test('throws invalid number', async () => {
-  await expect(wait('foo')).rejects.toThrow('milliseconds not a number');
+test('it appends url & package & revision when non present', () => {
+  const body = 'My Description';
+  const url = 'https://myapp.com';
+  const packageName = 'test_package'
+  const revision = '1234567';
+
+  const results = appendDeployedRevision(body, url, packageName, revision);
+  const expectedResults = `${body}\n\n --- \n\n[${packageName}_revision=${revision}](${url}?${packageName}_revision=${revision})`;
+
+  expect(results).toMatch(expectedResults);
 });
 
-test('wait 500 ms', async () => {
-  const start = new Date();
-  await wait(500);
-  const end = new Date();
-  var delta = Math.abs(end - start);
-  expect(delta).toBeGreaterThanOrEqual(500);
+test('it replaces existing package with latest revision', () => {
+  const packageName = 'existing_package';
+  const revision = 'abcd123';
+  const url = 'https://myapp.com';
+  const body = `My Description \n\n --- \n\n`;
+
+  const results = appendDeployedRevision(body, url, packageName, revision);
+  const expectedResults = `${body}\n\n --- \n\n[${packageName}_revision=${revision}](${url}?${packageName}_revision=${revision})`;
+
+  expect(results).toMatch(expectedResults);
 });
 
-// shows how the runner will run a javascript action with env / stdout protocol
-test('test runs', () => {
-  process.env['INPUT_MILLISECONDS'] = 100;
-  const ip = path.join(__dirname, 'index.js');
-  const result = cp.execSync(`node ${ip}`, {env: process.env}).toString();
-  console.log(result);
-})
+test('it replaces only existing packages revision with multiple package try links', () => {
+  const packageName = 'existing';
+  const revision = 'abcd123';
+  const url = 'https://myapp.com';
+  const body = `My Description \n\n --- \n\n [do_not_edit_revision=12345ab](${url}?do_not_edit_revision=12345ab)\n[${packageName}_revision=12345ab](${url}?${packageName}_revision=12345ab)`;
+
+  const results = appendDeployedRevision(body, url, packageName, revision);
+
+  const expectedResults = `My Description \n\n --- \n\n [do_not_edit_revision=12345ab](${url}?do_not_edit_revision=12345ab)\n[${packageName}_revision=${revision}](${url}?${packageName}_revision=${revision})`;
+
+  expect(results).toMatch(expectedResults);
+});
+
+test('it appends new try link after other package links', () => {
+  const packageName = 'existing';
+  const revision = 'abcd123';
+  const url = 'https://myapp.com';
+  const body = `My Description \n\n --- \n\n [do_not_edit_revision=12345ab](${url}?do_not_edit_revision=12345ab)`;
+
+  const results = appendDeployedRevision(body, url, packageName, revision);
+
+  const expectedResults = `My Description \n\n --- \n\n [do_not_edit_revision=12345ab](${url}?do_not_edit_revision=12345ab)\n[${packageName}_revision=${revision}](${url}?${packageName}_revision=${revision})`;
+
+  expect(results).toMatch(expectedResults);
+});

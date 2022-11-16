@@ -1,6 +1,36 @@
 require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
+/***/ 771:
+/***/ ((module) => {
+
+function appendDeployedRevision(body, url, packageName, revision) {
+  const packagePlusRevision = `${packageName}_revision=${revision}`;
+  let revisionLink = `${url}?${packagePlusRevision}`
+  let stylizedLink = `[${packagePlusRevision}](${revisionLink})`
+
+  let updatedBody = `${body}\n\n --- \n\n${stylizedLink}`
+
+  if (body.includes(url)) {
+    if (body.includes(`${packageName}_revision=`)) {
+      // existing package w/other revision
+      const regexPattern = `(${packageName}_revision=)+[A-Fa-f0-9]{7}`
+      let regex = new RegExp(regexPattern, 'g');
+
+      updatedBody = body.replace(regex, packagePlusRevision);
+    } else {
+      // existing other try links
+      updatedBody = body.concat(`\n${stylizedLink}`)
+    }
+  }
+
+  return updatedBody;
+}
+
+module.exports = appendDeployedRevision;
+
+/***/ }),
+
 /***/ 351:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -2688,19 +2718,10 @@ exports.default = _default;
 
 /***/ }),
 
-/***/ 258:
+/***/ 716:
 /***/ ((module) => {
 
-let wait = function (milliseconds) {
-  return new Promise((resolve) => {
-    if (typeof milliseconds !== 'number') {
-      throw new Error('milliseconds not a number');
-    }
-    setTimeout(() => resolve("done!"), milliseconds)
-  });
-};
-
-module.exports = wait;
+module.exports = eval("require")("@actions/github");
 
 
 /***/ }),
@@ -2835,27 +2856,64 @@ var __webpack_exports__ = {};
 // This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
 (() => {
 const core = __nccwpck_require__(186);
-const wait = __nccwpck_require__(258);
+const github = __nccwpck_require__(716);
+const appendRevision = __nccwpck_require__(771);
 
+const auth = core.getInput('auth');
+const repo = core.getInput('repo');
+const owner = core.getInput('owner');
+const pr = core.getInput('pr');
+const url = core.getInput('url');
+const packageName = core.getInput('packageName');
+const revision = core.getInput('revision');
 
-// most @actions toolkit packages have async methods
-async function run() {
-  try {
-    const ms = core.getInput('milliseconds');
-    core.info(`Waiting ${ms} milliseconds ...`);
+if (!auth || !repo || !owner || !pr || !url || !packageName || !revision ) {
+  core.setFailed('Please provide all arguments');
+  return 1;
+}
 
-    core.debug((new Date()).toTimeString()); // debug is only output if you set the secret `ACTIONS_RUNNER_DEBUG` to true
-    await wait(parseInt(ms));
-    core.info((new Date()).toTimeString());
+const octokit = github.getOctokit(auth);
 
-    core.setOutput('time', new Date().toTimeString());
-  } catch (error) {
-    core.setFailed(error.message);
+async function main() {
+  const data = await octokit
+    .request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
+      owner,
+      repo,
+      pull_number: pr,
+    })
+    .then(({ data }) => data)
+    .catch((error) => core.error(error));
+
+  if (!data) {
+    core.setFailed(`Error while getting PR ${pr}`);
+    return 1;
+  }
+
+  let { body } = data;
+
+  if (!body) {
+    core.info('Pull request has no description, setting it to an empty string');
+    body = '';
+  }
+
+  let updatedBody = appendRevision(body, url, packageName, revision);
+
+  const updateResponse = await octokit
+    .request('PATCH /repos/{owner}/{repo}/pulls/{pull_number}', {
+      owner,
+      repo,
+      pull_number: pr,
+      body: updatedBody,
+    })
+    .catch((error) => core.error(error));
+
+  if (!updateResponse) {
+    core.setFailed(`Error while updating PR ${pr}`);
+    return 1;
   }
 }
 
-run();
-
+main();
 })();
 
 module.exports = __webpack_exports__;
