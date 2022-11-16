@@ -22,4 +22,11 @@ jobs:
     - uses: actions/checkout@v3
     - uses: ./
       with:
-        milliseconds: 1000
+        auth: auth
+        repo: repo
+        owner: owner
+        pr: 1234
+        url: https://github.com/nicksteffens/action-append-deployed-revision-link
+        packageName: package_name
+        revision: 1234abc
+
