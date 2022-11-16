@@ -1,9 +1,9 @@
-# action-append-pr-revision
+# action-append-deployed-revision-link
 <p align="center">
   <a href="https://github.com/nicksteffens/action-append-deployed-revision-link/actions"><img alt="javscript-action status" src="https://github.com/nicksteffens/action-append-deployed-revision-link/workflows/units-test/badge.svg"></a>
 </p>
 
-`nicksteffens/action-append-pr-revision` action is Javascript action that appends a provided package with revision number `[${packageName_revision=${revision}](${url}?${packageName}_revision=${revision})` to the PR description. The following scenarios are possible with this action:
+`nicksteffens/action-append-deployed-revision-link` action is Javascript action that appends a provided package with revision number `[${packageName_revision=${revision}](${url}?${packageName}_revision=${revision})` to the PR description. The following scenarios are possible with this action:
 1. Appends revision link if non exist
 2. Updates the specific package's revision link if one exists
 3. Allows for multiple packages.
@@ -16,7 +16,7 @@ This action is inspired from [chabroA/action-append-pr-description](https://gith
 ```yaml
 steps:
   - name: Add Revision Link to PR description
-    uses: nicksteffens/action-append-pr-revision@main
+    uses: nicksteffens/action-append-deployed-revision-link@main
     with:
       auth: ${{ secrets.GITHUB_TOKEN }}
       repo: ${{ github.event.repository.name }}
